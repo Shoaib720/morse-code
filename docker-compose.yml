@@ -1,0 +1,54 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RMQ_PASSWORD} # Please give a strong password
+    configs:
+      - source: rabbitmq-plugins
+        target: /etc/rabbitmq/enabled_plugins
+    volumes:
+      - rabbitmq-lib:/var/lib/rabbitmq/
+      - rabbitmq-log:/var/log/rabbitmq
+  
+  mysql:
+    image: mysql:latest
+    restart: always
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: morsecode
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    restart: always
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "8080:80"
+
+configs:
+  rabbitmq-plugins:
+    content: "[rabbitmq_management]."  
+
+volumes:
+  rabbitmq-lib:
+    driver: local
+  rabbitmq-log:
+    driver: local
+  mysql_data:
+    driver: local
