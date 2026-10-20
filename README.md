@@ -17,6 +17,12 @@ This is an upgrade of my college IoT project.
 ### Database Schema
 ![DB Schema](./__assets__/db_schema.png)
 
+### Pin Diagram
+![Pin Diagram](./__assets__/pin_diagram.png)
+
+### Circuit Diagram
+![circuit](./__assets__/circuit.png)
+
 ## Setup
 
 ```bash
