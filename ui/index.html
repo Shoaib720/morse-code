@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Morse Code</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #111; color: #eee;
+           display: flex; justify-content: center; padding: 40px 16px; margin: 0; }
+    .card { width: 100%; max-width: 420px; background: #1c1c1c; padding: 24px;
+            border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+    h1 { margin: 0 0 4px; font-size: 1.4rem; }
+    p.sub { margin: 0 0 20px; color: #888; font-size: .9rem; }
+    label { display: block; font-size: .85rem; margin: 12px 0 4px; color: #aaa; }
+    input, textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px;
+                      border: 1px solid #333; background: #111; color: #eee; font-size: 1rem; }
+    textarea { resize: vertical; min-height: 80px; }
+    .count { text-align: right; font-size: .8rem; color: #666; }
+    button { width: 100%; margin-top: 16px; padding: 12px; border: 0; border-radius: 8px;
+             background: #2e7dff; color: #fff; font-size: 1rem; cursor: pointer; }
+    button:disabled { background: #444; cursor: not-allowed; }
+    #status { margin-top: 14px; min-height: 1.2em; font-size: .9rem; }
+    .ok { color: #4caf50; } .err { color: #ff5252; }
+    .note { margin-top: 20px; font-size: .75rem; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 style="text-align: center;">· − Morse Code − ·</h1>
+    <p class="sub">Your message will beep and blink on my desk.</p>
+
+    <label for="message">Message</label>
+    <textarea id="message" maxlength="100" placeholder="Hello world"></textarea>
+    <div class="count"><span id="count">0</span>/100</div>
+
+    <button id="send">Send</button>
+    <div id="status"></div>
+
+    <p class="note">Messages are public — don't send anything personal.</p>
+  </div>
+
+  <script>
+    // ---- Change these to match your FastAPI ----
+    const API_URL = "http://localhost:8000/messages";
+    const MAX_LEN = 100;
+    // Characters your Morse map supports
+    const ALLOWED = /^[a-z0-9 .,?'!\/()&:;=+\-_"$@]*$/i;
+
+    const msgEl = document.getElementById("message");
+    const userEl = document.getElementById("userId");
+    const btn = document.getElementById("send");
+    const statusEl = document.getElementById("status");
+
+    msgEl.addEventListener("input", () => {
+      document.getElementById("count").textContent = msgEl.value.length;
+    });
+
+    function showStatus(text, ok) {
+      statusEl.textContent = text;
+      statusEl.className = ok ? "ok" : "err";
+    }
+
+    btn.addEventListener("click", async () => {
+      const message = msgEl.value.trim();
+
+      if (!message) return showStatus("Type a message first.", false);
+      if (message.length > MAX_LEN) return showStatus(`Max ${MAX_LEN} characters.`, false);
+      if (!ALLOWED.test(message)) return showStatus("Only letters, numbers and basic punctuation.", false);
+
+      btn.disabled = true;
+      showStatus("Sending...", true);
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          // Adjust to the exact JSON your API expects
+          body: JSON.stringify({ message: message })
+        });
+
+        if (!res.ok) {
+          const detail = await res.text();
+          throw new Error(`API returned ${res.status}: ${detail}`);
+        }
+
+        showStatus("Queued! Listen for the beeps.", true);
+        msgEl.value = "";
+        document.getElementById("count").textContent = 0;
+      } catch (err) {
+        showStatus(err.message || "Could not reach the API.", false);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

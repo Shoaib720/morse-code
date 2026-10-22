@@ -1,37 +1,45 @@
-# 1. Expose 2 endpoints: 
-#    i. POST /messages
-#    ii. ...
-# 2. Configure RMQ connection
-# 3. Func to send message to RMQ
-# 4. 
-
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-import json, os
-import pika
-
-from .models import Message
+from os import getenv
+from pydantic import BaseModel
+from pika import PlainCredentials, BlockingConnection, ConnectionParameters
 
 load_dotenv()
 
 app = FastAPI()
 
-credentials = pika.PlainCredentials(
-    username=os.getenv("RMQ_USER"),
-    password=os.getenv("RMQ_PASSWORD")
+origins = [
+    "*"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
 
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters(
-        host=os.getenv('RMQ_HOSTNAME', 'localhost'),
-        port=os.getenv('RMQ_PORT', 5672),
+class Message(BaseModel):
+    message: str
+
+credentials = PlainCredentials(
+    username=getenv("RMQ_USER"),
+    password=getenv("RMQ_PASSWORD")
+)
+
+connection = BlockingConnection(
+    ConnectionParameters(
+        host=getenv('RMQ_HOSTNAME', 'localhost'),
+        port=getenv('RMQ_PORT', 5672),
         credentials=credentials
     )
 )
 
 channel = connection.channel()
 
-QUEUE_NAME = 'messages.q'
+QUEUE_NAME = 'message.q'
 
 channel.queue_declare(queue=QUEUE_NAME, durable=True, arguments={'x-queue-type': 'quorum'})
 

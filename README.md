@@ -11,12 +11,6 @@ This is an upgrade of my college IoT project.
 ### Architecture
 ![Architecture](./__assets__/architecture_v2.png)
 
-### Flow chart
-![Flow Chart](./__assets__/flowchart.png)
-
-### Database Schema
-![DB Schema](./__assets__/db_schema.png)
-
 ### Pin Diagram
 ![Pin Diagram](./__assets__/pin_diagram.png)
 

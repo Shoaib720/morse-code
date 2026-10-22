@@ -6,6 +6,8 @@
 
 import serial, time, pika, os, sys, json, jsonschema
 from dotenv import load_dotenv
+from pydantic import BaseModel
+import pika
 load_dotenv()
 
 # Run `python -m serial.tools.list_ports` to list the ports
@@ -48,6 +50,9 @@ payload_schema = {
     },
 }
 
+class Message(BaseModel):
+    message: str
+
 def encode_morse(message: str):
     if len(message) > 0:
         encoded_message = ""
@@ -85,20 +90,6 @@ def send_encoded_message(encoded_message: str):
     data = arduino.readline()
     return data.decode('utf-8')
 
-def parse_payload(payload: any):
-    utf_decoded_payload = str(payload.decode('utf-8'))
-    parsed_payload = json.loads(utf_decoded_payload)
-    # clean_payload = utf_decoded_payload.replace('\r', '').replace('\n', ' ').lower()
-    return parsed_payload
-
-def is_valid_payload(payload: any):
-    try:
-        jsonschema.validate(payload, payload_schema)
-        return True
-    except Exception as e:
-        print(e)
-        return False
-
 
 def main():
     credentials = pika.PlainCredentials(username=os.getenv('RMQ_USER'), password=os.getenv('RMQ_PASSWORD'))
@@ -107,18 +98,19 @@ def main():
 
     channel.queue_declare(queue='message.q', durable=True, arguments={'x-queue-type': 'quorum'})
 
-    def process_payload(ch, method, properties, body):
-        parsed_payload = parse_payload(body)
+    def process_payload(
+            ch: pika.channel.Channel,
+            method: pika.spec.Basic.Deliver,
+            properties: pika.spec.BasicProperties,
+            body: bytes):
+        parsed_payload = Message.model_validate_json(body)
         print(parsed_payload)
-        if is_valid_payload(parsed_payload):
-            message = parse_payload['message']
-            print(f" [x] Message: {message}")
-            morse_encoded_message = encode_morse(message)
-            print(f" [x] Encoded message: {morse_encoded_message}")
-            send_encoded_message(morse_encoded_message)
-            print(' [x] Message sent successfully.')
-        else:
-            print(' [x] ERROR: Invalid payload.')
+        message = parsed_payload.message
+        print(f" [x] Message: {message}")
+        morse_encoded_message = encode_morse(message)
+        print(f" [x] Encoded message: {morse_encoded_message}")
+        send_encoded_message(morse_encoded_message)
+        print(' [x] Message sent successfully.')
 
 
     channel.basic_consume(queue='message.q', on_message_callback=process_payload, auto_ack=True)
